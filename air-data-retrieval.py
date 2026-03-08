@@ -89,7 +89,31 @@ def merge_air_data(data_storage_path):
 
     return "All data merged and saved successfully!"
 
-    
-    
-
 merge_air_data(data_storage_path)
+
+
+def get_pollutant(data_storage_path):   
+    
+    url = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/pollutant"
+
+    response = requests.get(url)
+    response.raise_for_status()
+
+    data = response.json()
+
+    pollutans = []
+
+    for item in data:
+        pollutans.append({
+            "notation": item["notation"],
+            "id": item["id"],
+            "pk": item["pk"],
+            "code": item["code"]
+        })
+
+    print("saving pollutans...")
+    df_pollutans = pd.DataFrame(pollutans)
+    df_pollutans.to_parquet(f"{data_storage_path}/pollutants.parquet", index=False)
+    print("pollutans saved successfully!")
+
+get_pollutant(data_storage_path)
