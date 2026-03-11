@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from io import BytesIO
 import pyarrow
+import geopandas as gpd
 
 data_storage_path = "./data"
 
@@ -16,7 +17,7 @@ def retrieve_air_data():
     "pollutants": [],
     "dateTimeStart": "2013-01-01T00:00:00Z",
     "dateTimeEnd": "2025-12-31T23:59:59Z",
-    "aggregationType": "hour"
+    "aggregationType": "day"
   }
 
   response = requests.post(f"{BASE_URL}/ParquetFile/urls", json=body_request)
@@ -28,9 +29,6 @@ def retrieve_air_data():
           file.write(urls)
   else:
       print("Error:", response.status_code, response.text)
-
-  
-  
 
 def merge_air_data(data_storage_path):
 
@@ -89,9 +87,6 @@ def merge_air_data(data_storage_path):
 
     return "All data merged and saved successfully!"
 
-merge_air_data(data_storage_path)
-
-
 def get_pollutant(data_storage_path):   
     
     url = "https://eeadmz1-downloads-api-appservice.azurewebsites.net/pollutant"
@@ -116,4 +111,64 @@ def get_pollutant(data_storage_path):
     df_pollutans.to_parquet(f"{data_storage_path}/pollutants.parquet", index=False)
     print("pollutans saved successfully!")
 
-get_pollutant(data_storage_path)
+def get_stations(data_storage_path):
+    url = (
+    "https://air.discomap.eea.europa.eu/arcgis/rest/services/"
+    "AirQuality/AirQualityDownloadServiceEUMonitoringStations/MapServer/0/query?"
+    "where=CountryCode%20%3D%20'NL'&outFields=*&outSR=4326&f=geojson"
+    )
+
+    resp = requests.get(url)
+    gdf_eea = gpd.read_file(resp.text)
+
+    # Extract lat/lon and station code
+    gdf_eea['lat'] = gdf_eea.geometry.y
+    gdf_eea['lon'] = gdf_eea.geometry.x
+    eea_stations = gdf_eea[['AirQualityStationEoICode', 'lat', 'lon', 'AQStationName']].copy()
+    eea_stations = eea_stations.reset_index(drop=True)
+    
+    print("EEA stations NL:", eea_stations.shape[0])
+
+    # Save to CSV
+    if data_storage_path:
+        eea_stations.to_csv(f"{data_storage_path}/eea_stations.csv", index=False)
+        print(f"Saved EEA stations to {data_storage_path}")
+
+def main ():
+
+    # Step 1: Retrieve and merge air quality data
+    print("Retrieving and merging air quality data...")
+
+    retrieve_air_data()
+    merge_air_data(data_storage_path)
+
+    # Step 2: Get pollutant and station metadata
+    print("Retrieving pollutant and station metadata...")
+
+    get_pollutant(data_storage_path)
+    get_stations(data_storage_path)
+
+    # Step 3: Load data 
+    print("Loading data...")
+
+    air_df = pd.read_parquet(f"{data_storage_path}/netherlands_air_quality_2013_2025.parquet")
+    pollutants_df = pd.read_parquet(f"{data_storage_path}/pollutants.parquet")
+    eea_stations = pd.read_csv(f"{data_storage_path}/eea_stations.csv")
+
+    # Step 4: Data merging
+    print("Merging datasets...")
+
+    # Extract station_id from Samplingpoint column
+    air_df["station_id"] = air_df["Samplingpoint"].str.extract(r'(NL\d+)')
+
+    # Merge
+    air_df = air_df.merge(pollutants_df[["notation", "pk"]], left_on = "Pollutant", right_on = "pk", how="left")
+    air_df = air_df.merge(eea_stations, left_on = "station_id", right_on = "AirQualityStationEoICode", how="left")
+
+    print("Data merged successfully!")
+
+    air_df.to_parquet(f"{data_storage_path}/air_quality_2013_2025_full_dataset.parquet", index=False)
+
+    print("Full dataset saved successfully!")
+
+main()

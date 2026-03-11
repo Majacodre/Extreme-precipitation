@@ -1,3 +1,5 @@
+# From the KNMI Open Data API documentation: https://developer.dataplatform.knmi.nl/open-data-api
+
 import asyncio
 import logging
 import os
@@ -95,7 +97,7 @@ def get_max_worker_count(filesizes):
 
 
 async def main():
-    api_key = "<API_KEY>"
+    api_key = "<e64120690dcdc94a0a4f027dc73397ef>"
     dataset_name = "etmaalgegevensKNMIstations"
     dataset_version = "1"
     base_url = "https://api.dataplatform.knmi.nl/open-data/v1"
