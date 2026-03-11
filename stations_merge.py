@@ -33,5 +33,9 @@ KNMI_df = KNMI_2013.to_dataframe().reset_index()
 eea_data = eea_data.merge(nearest_stations, left_on="station_id", right_on="AirQualityStationEoICode", how="left")
 final_df = eea_data.merge(KNMI_df, left_on=["nearest_KNMI_station", "Start"], right_on=["station", "time"], how="left")
 
+# Clean up the final dataset
+final_df = final_df.drop(columns=["End", "AggType", "ResultTime", "FkObservationLog", "pk", "DataCapture", "AirQualityStationEoICode_x", "AirQualityStationEoICode_y", "nearest_KNMI_station", "time"])
+final_df = final_df.rename(columns={"station_id": "AQstation_id", "lat_x": "AQstation_lat", "lon_x": "AQstation_lon", "lat_y": "KNMI_station_lat", "lon_y": "KNMI_station_lon", "station": "KNMI_station_id", "Start": "Date"})
+
 # Save final dataset
 final_df.to_parquet("data/air_quality_with_meteorological_data.parquet", index=False)
