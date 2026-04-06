@@ -5,37 +5,45 @@ import xarray as xr
 from scipy.spatial import cKDTree
 
 # Read data
-eea_data = pd.read_parquet("data/air_quality_2013_2025_full_dataset.parquet")
-eea_stations = pd.read_csv("data/eea_stations.csv")
-KNMI = xr.open_dataset("data/KIS___OPER_P___OBS_____L2.nc", decode_cf=True, mask_and_scale=True)
-KNMI_2013 = KNMI.sel(time=KNMI.time >= np.datetime64("2013-01-01"))
+KNMI_data = pd.read_parquet("data/KNMI_final_data.parquet")
+Lucht_data = pd.read_parquet("data/Luchtmeetnet_final_data.parquet")
 
-# Find nearest stations 
-eea_stations = eea_stations[["AirQualityStationEoICode", "lat", "lon"]].drop_duplicates().reset_index(drop=True)
-KNMI_stations = KNMI_2013[['station','lat','lon']].to_dataframe().reset_index()
-KNMI_stations = KNMI_stations[['station','lat','lon']].drop_duplicates().reset_index(drop=True)
+# Extract station information and find nearest stations
+KNMI_stations = KNMI_data[["location", "latitude", "longitude"]].drop_duplicates().dropna().reset_index(drop=True)
+KNMI_cords = KNMI_stations[["latitude", "longitude"]].to_numpy()
+Lucht_stations = Lucht_data[["location", "latitude", "longitude"]].drop_duplicates().dropna().reset_index(drop=True)
+Lucht_cords = Lucht_stations[["latitude", "longitude"]].to_numpy()
 
-eea_cords = eea_stations[["lat", "lon"]].to_numpy()
-knmi_cords = KNMI_stations[["lat", "lon"]].to_numpy()
+tree = cKDTree(Lucht_cords)
+distances, indices = tree.query(KNMI_cords, k=1)
 
-tree = cKDTree(knmi_cords)
-distances, indices = tree.query(eea_cords, k = 1)
 distances_km = distances * 111
 
 nearest_stations = pd.DataFrame({
-    "AirQualityStationEoICode": eea_stations["AirQualityStationEoICode"],
-    "nearest_KNMI_station": KNMI_stations.iloc[indices]["station"].values,
+    "KNMI_station": KNMI_stations["location"],
+    "KNMI_lat": KNMI_stations["latitude"],
+    "KNMI_lon": KNMI_stations["longitude"],
+    "Lucht_station": Lucht_stations.iloc[indices]["location"].values,
+    "Lucht_lat": Lucht_stations.iloc[indices]["latitude"].values,
+    "Lucht_lon": Lucht_stations.iloc[indices]["longitude"].values,
     "distance_km": distances_km
 })
 
-# Merge data based on day and nearest station
-KNMI_df = KNMI_2013.to_dataframe().reset_index()
-eea_data = eea_data.merge(nearest_stations, left_on="station_id", right_on="AirQualityStationEoICode", how="left")
-final_df = eea_data.merge(KNMI_df, left_on=["nearest_KNMI_station", "Start"], right_on=["station", "time"], how="left")
 
-# Clean up the final dataset
-final_df = final_df.drop(columns=["End", "AggType", "ResultTime", "FkObservationLog", "pk", "DataCapture", "AirQualityStationEoICode_x", "AirQualityStationEoICode_y", "nearest_KNMI_station", "time"])
-final_df = final_df.rename(columns={"station_id": "AQstation_id", "lat_x": "AQstation_lat", "lon_x": "AQstation_lon", "lat_y": "KNMI_station_lat", "lon_y": "KNMI_station_lon", "station": "KNMI_station_id", "Start": "Date"})
+knmi_with_lucht = KNMI_data.merge(
+    nearest_stations,
+    left_on=["latitude", "longitude"],
+    right_on=["KNMI_lat", "KNMI_lon"],
+    how="left"
+)
 
+# Merge Lucht measurements using coordinates and time
+final_df = knmi_with_lucht.merge(
+    Lucht_data,
+    left_on=["Lucht_lat", "Lucht_lon", "time"],
+    right_on=["latitude", "longitude", "time"],
+    how="left",
+    suffixes=("_knmi", "_lucht")
+)
 # Save final dataset
-final_df.to_parquet("data/air_quality_with_meteorological_data.parquet", index=False)
+final_df.to_parquet("data/full_dataset.parquet", index=False)
