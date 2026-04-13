@@ -8,6 +8,15 @@ folder_path = "data/KNMI/KNMI_*"
 
 all_data = []
 
+# Custom function to get mode, if multiple modes exist take first
+def mode_or_first(x):
+    if len(x) == 0:
+        return None
+    m = x.mode()
+    if len(m) > 0:
+        return m.iloc[0]
+    return None
+
 # Loop through each folder and read the CSV and JSON files, then merge the data
 for path in glob.glob(folder_path):
 
@@ -32,16 +41,18 @@ final_data = pd.concat(all_data, ignore_index=True)
 
 # Aggregate by day and station
 sum_cols = ["RH", "DR", "SQ", "Q"]         
-mean_cols = ["temp", "TD", "FF", "FH", "P", "N", "VV", "DD", "rh"] 
+mean_cols = ["temp", "TD", "FF", "FH", "P", "N", "DD", "rh", "M", "R", "S", "O", "Y"] 
 max_cols = ["FX"]          
 min_cols = ["T10N"]              
-first_cols = ["location", "longitude", "latitude", "WW", "IX", "M", "R", "S", "O", "Y"]  
+first_cols = ["location", "longitude", "latitude"] 
+mode = ["WW", "IX", "VV"] 
 
 agg_dict = {col: "sum" for col in sum_cols if col in final_data.columns}
 agg_dict.update({col: "mean" for col in mean_cols if col in final_data.columns})
 agg_dict.update({col: "min" for col in min_cols if col in final_data.columns})
 agg_dict.update({col: "max" for col in max_cols if col in final_data.columns})
 agg_dict.update({col: "first" for col in first_cols if col in final_data.columns})
+agg_dict.update({col: mode_or_first for col in mode if col in final_data.columns})
 
 final_data = final_data.set_index("time")
 daily_knmi = (

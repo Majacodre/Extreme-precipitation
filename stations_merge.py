@@ -44,6 +44,6 @@ final_df = knmi_with_lucht.merge(
     right_on=["latitude", "longitude", "time"],
     how="left",
     suffixes=("_knmi", "_lucht")
-)
+) 
 # Save final dataset
 final_df.to_parquet("data/full_dataset.parquet", index=False)
