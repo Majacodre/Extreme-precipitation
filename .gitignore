@@ -1,3 +1,6 @@
 node_modules/
-data/
+data/KNMI/
+data/luchtmeetnet_csvs_enddate_dbscan/
+data/ne_countries/
+data/ne_countries_50m/
 .venv/

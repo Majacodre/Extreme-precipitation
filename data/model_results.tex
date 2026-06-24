@@ -1,0 +1,10 @@
+\begin{tabular}{llrrrrrrrrrrrrrrrrrrrrrrrrrl}
+\toprule
+model & features & precision_class_4 & precision_class_3 & precision_class_2 & precision_class_1 & precision_class_0 & recall_class_4 & recall_class_3 & recall_class_2 & recall_class_1 & recall_class_0 & f1_class_4 & f1_class_3 & f1_class_2 & f1_class_1 & f1_class_0 & support_class_4 & support_class_3 & support_class_2 & support_class_1 & support_class_0 & macro_f1 & weighted_f1 & precision_macro & recall_macro & best_threshold & best params \\
+\midrule
+XGBoost & Meteorological & 0.194444 & 0.400000 & 0.285714 & 0.294821 & 0.618093 & 0.090909 & 0.082314 & 0.008019 & 0.048764 & 0.973546 & 0.123894 & 0.136531 & 0.015601 & 0.083687 & 0.756129 & 77.000000 & 899.000000 & 1247.000000 & 3035.000000 & 7825.000000 & 0.223168 & 0.483256 & 0.358615 & 0.240711 & 0.150000 & {'learning_rate': 0.1, 'max_depth': 5, 'n_estimators': 200} \\
+SVM & Meteorological & 0.005589 & 0.500000 & 0.000000 & 0.500000 & 0.000000 & 0.948052 & 0.001112 & 0.000000 & 0.000329 & 0.000000 & 0.011112 & 0.002220 & 0.000000 & 0.000659 & 0.000000 & 77.000000 & 899.000000 & 1247.000000 & 3035.000000 & 7825.000000 & 0.002798 & 0.000371 & 0.201118 & 0.189899 & 0.150000 & {'C': 10, 'gamma': 'scale'} \\
+XGBoost & All features & 0.283019 & 0.500000 & 0.318841 & 0.400971 & 0.649844 & 0.194805 & 0.172414 & 0.035285 & 0.136079 & 0.959361 & 0.230769 & 0.256410 & 0.063538 & 0.203198 & 0.774836 & 77.000000 & 899.000000 & 1247.000000 & 3035.000000 & 7825.000000 & 0.305750 & 0.535604 & 0.430535 & 0.299589 & 0.150000 & {'learning_rate': 0.1, 'max_depth': 7, 'n_estimators': 100} \\
+SVM & All features & 0.004685 & 0.222222 & 0.160000 & 0.100000 & 0.000000 & 0.792208 & 0.002225 & 0.003208 & 0.000659 & 0.000000 & 0.009314 & 0.004405 & 0.006289 & 0.001309 & 0.000000 & 77.000000 & 899.000000 & 1247.000000 & 3035.000000 & 7825.000000 & 0.004264 & 0.001261 & 0.097381 & 0.159660 & 0.150000 & {'C': 10, 'gamma': 'scale'} \\
+\bottomrule
+\end{tabular}

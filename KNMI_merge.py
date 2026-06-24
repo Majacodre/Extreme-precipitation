@@ -2,6 +2,7 @@
 import pandas as pd
 import glob
 import os
+import numpy as np
 
 # Define the folder path where the KNMI data is stored
 folder_path = "data/KNMI/KNMI_*"
@@ -24,7 +25,7 @@ for path in glob.glob(folder_path):
     json_files = glob.glob(os.path.join(path, "*.json"))
 
     csv_data = pd.read_csv(csv_files[0], sep=",")
-    csv_data["time"] = pd.to_datetime(csv_data["time"], unit="s")
+    csv_data["time"] = pd.to_datetime(csv_data["time"], unit = 's', errors="coerce")
 
     json_data = pd.read_json(json_files[0])
     location = json_data["location"].iloc[0]
@@ -46,7 +47,18 @@ max_cols = ["FX"]
 min_cols = ["T10N"]              
 first_cols = ["location", "longitude", "latitude"] 
 mode = ["WW", "IX", "VV"] 
+none_negative = ["RH", "DR", "SQ", "Q", "FF", "FH", "P", "N", "rh", "FX"]
 
+# Ensure all numeric columns are properly converted to numeric types and there are no values below 0 before aggregation
+numeric_cols = sum_cols + mean_cols + max_cols + min_cols
+
+for col in numeric_cols:
+    if col in final_data.columns:
+        final_data[col] = pd.to_numeric(final_data[col], errors="coerce")
+
+final_data[none_negative] = final_data[none_negative].mask(final_data[none_negative] < 0, np.nan)
+
+# Build aggregation dictionary
 agg_dict = {col: "sum" for col in sum_cols if col in final_data.columns}
 agg_dict.update({col: "mean" for col in mean_cols if col in final_data.columns})
 agg_dict.update({col: "min" for col in min_cols if col in final_data.columns})
@@ -54,12 +66,12 @@ agg_dict.update({col: "max" for col in max_cols if col in final_data.columns})
 agg_dict.update({col: "first" for col in first_cols if col in final_data.columns})
 agg_dict.update({col: mode_or_first for col in mode if col in final_data.columns})
 
-final_data = final_data.set_index("time")
+final_data["date"] = pd.to_datetime(final_data["time"]).dt.floor("D")
+
 daily_knmi = (
-    final_data.groupby("location", group_keys=False)
-              .resample("D")
-              .agg(agg_dict)
-              .reset_index()
+    final_data
+    .groupby(["location", "longitude", "latitude", "date"], as_index=False)
+    .agg(agg_dict)
 )
 
 daily_knmi.to_parquet("data/KNMI_final_data.parquet", index=False)
